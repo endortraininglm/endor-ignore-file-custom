@@ -89,29 +89,9 @@ Configure these secrets in your repository settings:
 
 The `GITHUB_TOKEN` is automatically provided by GitHub Actions and has PR read/write permissions.
 
-### Manual Script Usage
+### Script Documentation
 
-You can also run the sync script manually:
-
-```bash
-# Sync main branch policy
-python scripts/sync_endor_policy.py \
-  --namespace <namespace> \
-  --repo-url "git@github.com:org/repo.git"
-
-# Sync PR policy
-python scripts/sync_endor_policy.py \
-  --namespace <namespace> \
-  --repo-url "git@github.com:org/repo.git" \
-  --pr-id <pr_number>
-
-# Cleanup PR policy
-python scripts/sync_endor_policy.py \
-  --namespace <namespace> \
-  --repo-url "git@github.com:org/repo.git" \
-  --pr-id <pr_number> \
-  --cleanup
-```
+For detailed documentation about the sync script, including usage examples and command-line options, see [`scripts/README.md`](scripts/README.md).
 
 ## Security Warning
 
