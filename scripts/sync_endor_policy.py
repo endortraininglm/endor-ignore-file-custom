@@ -235,7 +235,15 @@ def get_policy_by_tag(
     
     objects = result.get("list", {}).get("objects", [])
     if objects:
-        return objects[0]
+        policy = objects[0]
+        # Verify the tag is actually in the tags array (matches might do substring matching)
+        policy_tags = policy.get("meta", {}).get("tags", [])
+        if tag in policy_tags:
+            return policy
+        else:
+            # Policy found but tag doesn't match exactly - this shouldn't happen but log it
+            print(f"Warning: Policy found but tag '{tag}' not in tags array: {policy_tags}", file=sys.stderr)
+            return None
     
     return None
 
@@ -419,6 +427,10 @@ def sync_main_policy(
         current_rego = existing_policy.get("spec", {}).get("rule", "")
         current_vuln_ids = extract_vuln_ids_from_rego(current_rego)
         
+        print(f"Found existing main policy (UUID: {existing_policy.get('uuid', 'unknown')})")
+        print(f"Current policy has {len(current_vuln_ids)} vulnerability IDs: {current_vuln_ids}")
+        print(f"Desired state has {len(vuln_ids)} vulnerability IDs: {vuln_ids}")
+        
         # Compare (both should be sorted)
         if current_vuln_ids == vuln_ids:
             print(f"Main policy already up to date. No changes needed.")
@@ -476,6 +488,10 @@ def sync_pr_policy(
         # Extract current vulnerability IDs
         current_rego = existing_policy.get("spec", {}).get("rule", "")
         current_vuln_ids = extract_vuln_ids_from_rego(current_rego)
+        
+        print(f"Found existing PR policy (UUID: {existing_policy.get('uuid', 'unknown')})")
+        print(f"Current policy has {len(current_vuln_ids)} vulnerability IDs: {current_vuln_ids}")
+        print(f"Desired state has {len(vuln_ids)} vulnerability IDs: {vuln_ids}")
         
         # Compare (both should be sorted)
         if current_vuln_ids == vuln_ids:
