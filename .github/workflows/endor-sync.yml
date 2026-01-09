@@ -63,7 +63,7 @@ jobs:
             --pr-incremental \
             --scm-pr-id=${{ github.event.pull_request.number }} \
             --enable-pr-comments=true \
-            --finding-tags="${FINDING_TAG}" \
+            --tags="${FINDING_TAG}" \
             --github-token="${{ secrets.GITHUB_TOKEN }}" \
             --api-key="${{ secrets.ENDOR_API_KEY }}" \
             --api-secret="${{ secrets.ENDOR_API_SECRET }}"

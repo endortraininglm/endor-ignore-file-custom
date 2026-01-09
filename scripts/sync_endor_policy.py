@@ -74,7 +74,7 @@ match_vuln_id(finding, ids) {{
 match_pr_branch(finding) {{
   pr_tag := ["scan-{project_uuid}-pr-{pr_id}"]
   finding.context.type == "CONTEXT_TYPE_CI_RUN"
-  finding.meta.tags[_] = pr_tag[_]
+  finding.context.tags[_] = pr_tag[_]
 }}
 
 match_finding[result] {{
