@@ -37,7 +37,7 @@ jobs:
             --pr-id ${{ github.event.pull_request.number }} \
             --api-key "${{ secrets.ENDOR_API_KEY }}" \
             --api-secret "${{ secrets.ENDOR_API_SECRET }}"
-        continue-on-error: false  # Don't fail if policy sync fails
+        continue-on-error: true  # Don't fail if policy sync fails
       
       - name: Run Endor Scan
         if: github.event.pull_request.number != null
