@@ -582,6 +582,20 @@ def main():
     
     print(f"Project UUID: {project_uuid}")
     
+    # Write project UUID to file for use in subsequent steps (GitHub Actions)
+    project_uuid_file = os.getenv("GITHUB_STATE") or ".endor-project-uuid"
+    try:
+        with open(project_uuid_file, 'w') as f:
+            f.write(project_uuid)
+        # Also set as GitHub Actions environment variable if available
+        github_env = os.getenv("GITHUB_ENV")
+        if github_env:
+            with open(github_env, 'a') as f:
+                f.write(f"ENDOR_PROJECT_UUID={project_uuid}\n")
+    except Exception as e:
+        # Non-fatal if we can't write the file
+        print(f"Warning: Could not write project UUID to file: {e}", file=sys.stderr)
+    
     # Extract repo name from URL for policy naming
     # e.g., git@github.com:org/repo.git -> repo
     repo_name_match = re.search(r'[:/]([^/]+)\.git$', args.repo_url)

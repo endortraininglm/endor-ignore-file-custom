@@ -29,6 +29,7 @@ jobs:
           python-version: '3.11'
       
       - name: Sync Endor Exception Policy
+        id: sync-policy
         if: github.event.pull_request.number != null
         run: |
           python scripts/sync_endor_policy.py \
@@ -42,6 +43,19 @@ jobs:
       - name: Run Endor Scan
         if: github.event.pull_request.number != null
         run: |
+          # Read project UUID from file (written by sync script)
+          if [ -f ".endor-project-uuid" ]; then
+            ENDOR_PROJECT_UUID=$(cat .endor-project-uuid)
+          elif [ -n "$ENDOR_PROJECT_UUID" ]; then
+            # Use env var if set (from GITHUB_ENV)
+            ENDOR_PROJECT_UUID="$ENDOR_PROJECT_UUID"
+          else
+            echo "ERROR: Could not determine project UUID" >&2
+            exit 1
+          fi
+          
+          FINDING_TAG="scan-${ENDOR_PROJECT_UUID}-pr-${{ github.event.pull_request.number }}"
+          
           endorctl scan \
             -n "${{ secrets.ENDOR_NAMESPACE }}" \
             --dependencies \
@@ -49,7 +63,9 @@ jobs:
             --pr-incremental \
             --scm-pr-id=${{ github.event.pull_request.number }} \
             --enable-pr-comments=true \
+            --finding-tags="${FINDING_TAG}" \
             --github-token="${{ secrets.GITHUB_TOKEN }}" \
             --api-key="${{ secrets.ENDOR_API_KEY }}" \
             --api-secret="${{ secrets.ENDOR_API_SECRET }}"
+            
 
