@@ -10,9 +10,11 @@ This project intentionally includes a dependency with known security vulnerabili
 
 - **Package**: lodash
 - **Version**: 4.17.19
-- **Vulnerability**: CVE-2020-8203 (Prototype Pollution)
+- **Known Vulnerabilities**:
+  - CVE-2020-8203 (Prototype Pollution) - CVSS 7.4 (High)
+  - CVE-2019-10744 (Regular Expression Denial of Service) - CVSS 5.3 (Moderate)
+  - Command Injection - CVSS 7.2 (High)
 - **Category**: String manipulation and object merging
-- **CVSS Score**: 7.4 (High)
 
 The vulnerable code paths are exercised through various lodash functions including:
 - `_.merge()` - Object merging

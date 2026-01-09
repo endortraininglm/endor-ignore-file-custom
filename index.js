@@ -55,4 +55,7 @@ const merged = _.mergeWith(object, other, (objValue, srcValue) => {
 console.log('\nMerged arrays:', merged);
 
 console.log('\n✅ Application completed successfully!');
-console.log('⚠️  Note: This application uses lodash 4.17.19 which has known vulnerabilities (CVE-2020-8203)');
+console.log('⚠️  Note: This application uses lodash 4.17.19 which has known vulnerabilities:');
+console.log('   - CVE-2020-8203 (Prototype Pollution)');
+console.log('   - CVE-2019-10744 (Regular Expression Denial of Service)');
+console.log('   - Command Injection vulnerability');
