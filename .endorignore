@@ -3,5 +3,5 @@ GHSA-35jh-r3h4-6jhm
 GHSA-29mw-wpgm-hmr9
 # tar-fs @2.1.2
 GHSA-vj76-c3g6-qr5v
-# Unrelated no effect
-# GHSA-7rjr-3q55-vv33
+# tar-fs can extract outside
+GHSA-8cj5-5rvv-wf4v
