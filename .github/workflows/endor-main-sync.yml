@@ -1,0 +1,28 @@
+name: Endor Main Branch Policy Sync
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  sync-main-policy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Sync Endor Exception Policy (Main)
+        run: |
+          python scripts/sync_endor_policy.py \
+            --namespace "${{ secrets.ENDOR_NAMESPACE }}" \
+            --repo-url "git@github.com:${{ github.repository }}.git"
+

@@ -1,0 +1,3 @@
+# Ignore Regular Expression Denial of Service (ReDoS) in lodash
+GHSA-35jh-r3h4-6jhm
+GHSA-29mw-wpgm-hmr9
