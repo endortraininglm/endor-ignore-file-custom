@@ -97,9 +97,22 @@ def run_endorctl_command(
     namespace: str, 
     command: List[str], 
     api_key: Optional[str] = None,
-    api_secret: Optional[str] = None
+    api_secret: Optional[str] = None,
+    expect_json: bool = True
 ) -> Dict[Any, Any]:
-    """Run an endorctl command and return parsed JSON output."""
+    """
+    Run an endorctl command and return parsed JSON output.
+    
+    Args:
+        namespace: Endor namespace
+        command: Command arguments
+        api_key: Endor API key
+        api_secret: Endor API secret
+        expect_json: Whether to expect JSON output (default: True)
+    
+    Returns:
+        Parsed JSON as dict, or empty dict if no JSON output
+    """
     full_command = ["endorctl", "-n", namespace]
     
     # Add authentication if provided
@@ -117,15 +130,22 @@ def run_endorctl_command(
             check=True
         )
         if result.stdout.strip():
-            return json.loads(result.stdout)
+            if expect_json:
+                try:
+                    return json.loads(result.stdout)
+                except json.JSONDecodeError:
+                    # Some commands (like delete) return plain text success messages
+                    # Print the output for visibility but return empty dict
+                    print(result.stdout.strip())
+                    return {}
+            else:
+                # For non-JSON commands, just print and return empty dict
+                print(result.stdout.strip())
+                return {}
         return {}
     except subprocess.CalledProcessError as e:
         print(f"Error running endorctl command: {' '.join(full_command)}", file=sys.stderr)
         print(f"Error output: {e.stderr}", file=sys.stderr)
-        raise
-    except json.JSONDecodeError as e:
-        print(f"Error parsing JSON output: {e}", file=sys.stderr)
-        print(f"Output was: {result.stdout}", file=sys.stderr)
         raise
 
 
@@ -371,7 +391,8 @@ def delete_policy(
         "--uuid", policy_uuid
     ]
     
-    run_endorctl_command(namespace, command, api_key, api_secret)
+    # Delete command returns plain text, not JSON
+    run_endorctl_command(namespace, command, api_key, api_secret, expect_json=False)
 
 
 def sync_main_policy(
@@ -583,18 +604,20 @@ def main():
     print(f"Project UUID: {project_uuid}")
     
     # Write project UUID to file for use in subsequent steps (GitHub Actions)
-    project_uuid_file = os.getenv("GITHUB_STATE") or ".endor-project-uuid"
-    try:
-        with open(project_uuid_file, 'w') as f:
-            f.write(project_uuid)
-        # Also set as GitHub Actions environment variable if available
-        github_env = os.getenv("GITHUB_ENV")
-        if github_env:
-            with open(github_env, 'a') as f:
-                f.write(f"ENDOR_PROJECT_UUID={project_uuid}\n")
-    except Exception as e:
-        # Non-fatal if we can't write the file
-        print(f"Warning: Could not write project UUID to file: {e}", file=sys.stderr)
+    # Only write if not in cleanup mode (cleanup doesn't need it)
+    if not args.cleanup:
+        project_uuid_file = ".endor-project-uuid"
+        try:
+            with open(project_uuid_file, 'w') as f:
+                f.write(project_uuid)
+            # Also set as GitHub Actions environment variable if available
+            github_env = os.getenv("GITHUB_ENV")
+            if github_env:
+                with open(github_env, 'a') as f:
+                    f.write(f"ENDOR_PROJECT_UUID={project_uuid}\n")
+        except Exception as e:
+            # Non-fatal if we can't write the file
+            print(f"Warning: Could not write project UUID to file: {e}", file=sys.stderr)
     
     # Extract repo name from URL for policy naming
     # e.g., git@github.com:org/repo.git -> repo
