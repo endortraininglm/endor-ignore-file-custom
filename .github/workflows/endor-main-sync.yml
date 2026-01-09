@@ -24,5 +24,7 @@ jobs:
         run: |
           python scripts/sync_endor_policy.py \
             --namespace "${{ secrets.ENDOR_NAMESPACE }}" \
-            --repo-url "git@github.com:${{ github.repository }}.git"
+            --repo-url "git@github.com:${{ github.repository }}.git" \
+            --api-key "${{ secrets.ENDOR_API_KEY }}" \
+            --api-secret "${{ secrets.ENDOR_API_SECRET }}"
 

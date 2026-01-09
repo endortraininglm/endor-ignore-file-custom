@@ -11,6 +11,7 @@ Usage:
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -92,9 +93,22 @@ match_finding[result] {{
 """
 
 
-def run_endorctl_command(namespace: str, command: List[str]) -> Dict[Any, Any]:
+def run_endorctl_command(
+    namespace: str, 
+    command: List[str], 
+    api_key: Optional[str] = None,
+    api_secret: Optional[str] = None
+) -> Dict[Any, Any]:
     """Run an endorctl command and return parsed JSON output."""
-    full_command = ["endorctl", "-n", namespace] + command
+    full_command = ["endorctl", "-n", namespace]
+    
+    # Add authentication if provided
+    if api_key:
+        full_command.extend(["--api-key", api_key])
+    if api_secret:
+        full_command.extend(["--api-secret", api_secret])
+    
+    full_command.extend(command)
     try:
         result = subprocess.run(
             full_command,
@@ -139,13 +153,20 @@ def parse_ignore_file(ignore_file_path: str = ".endorignore") -> List[str]:
     return sorted(vuln_ids)
 
 
-def get_project_uuid(namespace: str, repo_url: str) -> Optional[str]:
+def get_project_uuid(
+    namespace: str, 
+    repo_url: str,
+    api_key: Optional[str] = None,
+    api_secret: Optional[str] = None
+) -> Optional[str]:
     """
     Get Endor project UUID from repository URL.
     
     Args:
         namespace: Endor namespace
         repo_url: Git repository URL (e.g., git@github.com:org/repo.git)
+        api_key: Endor API key
+        api_secret: Endor API secret
     
     Returns:
         Project UUID or None if not found
@@ -156,7 +177,7 @@ def get_project_uuid(namespace: str, repo_url: str) -> Optional[str]:
         "--field-mask", "uuid"
     ]
     
-    result = run_endorctl_command(namespace, command)
+    result = run_endorctl_command(namespace, command, api_key, api_secret)
     
     objects = result.get("list", {}).get("objects", [])
     if objects:
@@ -165,13 +186,20 @@ def get_project_uuid(namespace: str, repo_url: str) -> Optional[str]:
     return None
 
 
-def get_policy_by_tag(namespace: str, tag: str) -> Optional[Dict[Any, Any]]:
+def get_policy_by_tag(
+    namespace: str, 
+    tag: str,
+    api_key: Optional[str] = None,
+    api_secret: Optional[str] = None
+) -> Optional[Dict[Any, Any]]:
     """
     Find exception policy by tag.
     
     Args:
         namespace: Endor namespace
         tag: Policy tag to search for (e.g., "project-{uuid}-main")
+        api_key: Endor API key
+        api_secret: Endor API secret
     
     Returns:
         Policy object or None if not found
@@ -183,7 +211,7 @@ def get_policy_by_tag(namespace: str, tag: str) -> Optional[Dict[Any, Any]]:
         "--limit", "1"
     ]
     
-    result = run_endorctl_command(namespace, command)
+    result = run_endorctl_command(namespace, command, api_key, api_secret)
     
     objects = result.get("list", {}).get("objects", [])
     if objects:
@@ -249,6 +277,8 @@ def create_policy(
     vuln_ids: List[str],
     policy_name: str,
     tag: str,
+    api_key: Optional[str] = None,
+    api_secret: Optional[str] = None,
     pr_id: Optional[str] = None
 ) -> str:
     """
@@ -284,7 +314,7 @@ def create_policy(
         "--data", json.dumps(policy_data)
     ]
     
-    result = run_endorctl_command(namespace, command)
+    result = run_endorctl_command(namespace, command, api_key, api_secret)
     policy_uuid = result.get("uuid")
     
     if not policy_uuid:
@@ -300,6 +330,8 @@ def update_policy(
     vuln_ids: List[str],
     policy_name: str,
     tag: str,
+    api_key: Optional[str] = None,
+    api_secret: Optional[str] = None,
     pr_id: Optional[str] = None
 ) -> None:
     """Update an existing exception policy."""
@@ -324,24 +356,31 @@ def update_policy(
         "--data", json.dumps(policy_data)
     ]
     
-    run_endorctl_command(namespace, command)
+    run_endorctl_command(namespace, command, api_key, api_secret)
 
 
-def delete_policy(namespace: str, policy_uuid: str) -> None:
+def delete_policy(
+    namespace: str, 
+    policy_uuid: str,
+    api_key: Optional[str] = None,
+    api_secret: Optional[str] = None
+) -> None:
     """Delete an exception policy."""
     command = [
         "api", "delete", "-r", "Policy",
         "--uuid", policy_uuid
     ]
     
-    run_endorctl_command(namespace, command)
+    run_endorctl_command(namespace, command, api_key, api_secret)
 
 
 def sync_main_policy(
     namespace: str,
     project_uuid: str,
     vuln_ids: List[str],
-    repo_name: str
+    repo_name: str,
+    api_key: Optional[str] = None,
+    api_secret: Optional[str] = None
 ) -> None:
     """
     Sync main branch exception policy.
@@ -352,7 +391,7 @@ def sync_main_policy(
     policy_name = f"Exception Policy For Repo [{repo_name}] - Version: Main"
     
     # Check if policy exists
-    existing_policy = get_policy_by_tag(namespace, tag)
+    existing_policy = get_policy_by_tag(namespace, tag, api_key, api_secret)
     
     if existing_policy:
         # Extract current vulnerability IDs
@@ -372,7 +411,9 @@ def sync_main_policy(
             project_uuid,
             vuln_ids,
             policy_name,
-            tag
+            tag,
+            api_key,
+            api_secret
         )
         print(f"Main policy updated successfully.")
     else:
@@ -383,7 +424,9 @@ def sync_main_policy(
             project_uuid,
             vuln_ids,
             policy_name,
-            tag
+            tag,
+            api_key,
+            api_secret
         )
         print(f"Main policy created successfully (UUID: {policy_uuid}).")
 
@@ -393,7 +436,9 @@ def sync_pr_policy(
     project_uuid: str,
     vuln_ids: List[str],
     repo_name: str,
-    pr_id: str
+    pr_id: str,
+    api_key: Optional[str] = None,
+    api_secret: Optional[str] = None
 ) -> None:
     """
     Sync PR-specific exception policy.
@@ -404,7 +449,7 @@ def sync_pr_policy(
     policy_name = f"Exception Policy For Repo [{repo_name}] - Version: PR-{pr_id}"
     
     # Check if policy exists
-    existing_policy = get_policy_by_tag(namespace, tag)
+    existing_policy = get_policy_by_tag(namespace, tag, api_key, api_secret)
     
     if existing_policy:
         # Extract current vulnerability IDs
@@ -425,6 +470,8 @@ def sync_pr_policy(
             vuln_ids,
             policy_name,
             tag,
+            api_key,
+            api_secret,
             pr_id
         )
         print(f"PR policy updated successfully.")
@@ -437,12 +484,20 @@ def sync_pr_policy(
             vuln_ids,
             policy_name,
             tag,
+            api_key,
+            api_secret,
             pr_id
         )
         print(f"PR policy created successfully (UUID: {policy_uuid}).")
 
 
-def cleanup_pr_policy(namespace: str, project_uuid: str, pr_id: str) -> None:
+def cleanup_pr_policy(
+    namespace: str, 
+    project_uuid: str, 
+    pr_id: str,
+    api_key: Optional[str] = None,
+    api_secret: Optional[str] = None
+) -> None:
     """
     Delete PR-specific exception policy (called when PR closes).
     
@@ -450,13 +505,15 @@ def cleanup_pr_policy(namespace: str, project_uuid: str, pr_id: str) -> None:
         namespace: Endor namespace
         project_uuid: Endor project UUID
         pr_id: PR ID to clean up
+        api_key: Endor API key
+        api_secret: Endor API secret
     """
     tag = f"project-{project_uuid}-pr-{pr_id}"
-    existing_policy = get_policy_by_tag(namespace, tag)
+    existing_policy = get_policy_by_tag(namespace, tag, api_key, api_secret)
     
     if existing_policy:
         print(f"Deleting PR policy for PR {pr_id}...")
-        delete_policy(namespace, existing_policy["uuid"])
+        delete_policy(namespace, existing_policy["uuid"], api_key, api_secret)
         print(f"PR policy deleted successfully.")
     else:
         print(f"PR policy not found. Nothing to delete.")
@@ -490,21 +547,34 @@ def main():
         action="store_true",
         help="Delete PR policy (use with --pr-id for PR cleanup)"
     )
+    parser.add_argument(
+        "--api-key",
+        help="Endor API key (or set ENDOR_API_KEY env var)"
+    )
+    parser.add_argument(
+        "--api-secret",
+        help="Endor API secret (or set ENDOR_API_SECRET env var)"
+    )
     
     args = parser.parse_args()
+    
+    # Get API credentials from args or environment variables
+    api_key = args.api_key or os.getenv("ENDOR_API_KEY")
+    api_secret = args.api_secret or os.getenv("ENDOR_API_SECRET")
     
     # Parse ignore file
     vuln_ids = parse_ignore_file(args.ignore_file)
     
-    if not vuln_ids:
+    if not vuln_ids and not args.cleanup:
         print("No vulnerability IDs found in ignore file. Exiting.")
         return
     
-    print(f"Found {len(vuln_ids)} vulnerability IDs in ignore file.")
+    if vuln_ids:
+        print(f"Found {len(vuln_ids)} vulnerability IDs in ignore file.")
     
     # Get project UUID
     print(f"Looking up project UUID for {args.repo_url}...")
-    project_uuid = get_project_uuid(args.namespace, args.repo_url)
+    project_uuid = get_project_uuid(args.namespace, args.repo_url, api_key, api_secret)
     
     if not project_uuid:
         print(f"ERROR: Project not found for {args.repo_url}", file=sys.stderr)
@@ -522,14 +592,14 @@ def main():
         if not args.pr_id:
             print("ERROR: --pr-id is required for cleanup", file=sys.stderr)
             sys.exit(1)
-        cleanup_pr_policy(args.namespace, project_uuid, args.pr_id)
+        cleanup_pr_policy(args.namespace, project_uuid, args.pr_id, api_key, api_secret)
         return
     
     # Sync policy
     if args.pr_id:
-        sync_pr_policy(args.namespace, project_uuid, vuln_ids, repo_name, args.pr_id)
+        sync_pr_policy(args.namespace, project_uuid, vuln_ids, repo_name, args.pr_id, api_key, api_secret)
     else:
-        sync_main_policy(args.namespace, project_uuid, vuln_ids, repo_name)
+        sync_main_policy(args.namespace, project_uuid, vuln_ids, repo_name, api_key, api_secret)
 
 
 if __name__ == "__main__":

@@ -23,5 +23,7 @@ jobs:
             --namespace "${{ secrets.ENDOR_NAMESPACE }}" \
             --repo-url "git@github.com:${{ github.repository }}.git" \
             --pr-id ${{ github.event.pull_request.number }} \
-            --cleanup
+            --cleanup \
+            --api-key "${{ secrets.ENDOR_API_KEY }}" \
+            --api-secret "${{ secrets.ENDOR_API_SECRET }}"
 
