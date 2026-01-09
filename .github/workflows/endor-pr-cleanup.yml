@@ -1,0 +1,29 @@
+name: Endor PR Policy Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  cleanup-pr-policy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Cleanup PR Exception Policy
+        run: |
+          python scripts/sync_endor_policy.py \
+            --namespace "${{ secrets.ENDOR_NAMESPACE }}" \
+            --repo-url "git@github.com:${{ github.repository }}.git" \
+            --pr-id ${{ github.event.pull_request.number }} \
+            --cleanup \
+            --api-key "${{ secrets.ENDOR_API_KEY }}" \
+            --api-secret "${{ secrets.ENDOR_API_SECRET }}"
+

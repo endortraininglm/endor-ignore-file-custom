@@ -1,0 +1,71 @@
+name: Endor Policy Sync and Scan
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  sync-and-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Install endorctl
+        run: npm install -g endorctl
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Sync Endor Exception Policy
+        id: sync-policy
+        if: github.event.pull_request.number != null
+        run: |
+          python scripts/sync_endor_policy.py \
+            --namespace "${{ secrets.ENDOR_NAMESPACE }}" \
+            --repo-url "git@github.com:${{ github.repository }}.git" \
+            --pr-id ${{ github.event.pull_request.number }} \
+            --api-key "${{ secrets.ENDOR_API_KEY }}" \
+            --api-secret "${{ secrets.ENDOR_API_SECRET }}"
+        continue-on-error: true  # Don't fail if policy sync fails
+      
+      - name: Run Endor Scan
+        if: github.event.pull_request.number != null
+        run: |
+          # Read project UUID from file (written by sync script)
+          if [ -f ".endor-project-uuid" ]; then
+            ENDOR_PROJECT_UUID=$(cat .endor-project-uuid)
+          elif [ -n "$ENDOR_PROJECT_UUID" ]; then
+            # Use env var if set (from GITHUB_ENV)
+            ENDOR_PROJECT_UUID="$ENDOR_PROJECT_UUID"
+          else
+            echo "ERROR: Could not determine project UUID" >&2
+            exit 1
+          fi
+          
+          FINDING_TAG="scan-${ENDOR_PROJECT_UUID}-pr-${{ github.event.pull_request.number }}"
+          
+          endorctl scan \
+            -n "${{ secrets.ENDOR_NAMESPACE }}" \
+            --dependencies \
+            --pr \
+            --pr-incremental \
+            --scm-pr-id=${{ github.event.pull_request.number }} \
+            --enable-pr-comments=true \
+            --tags="${FINDING_TAG}" \
+            --github-token="${{ secrets.GITHUB_TOKEN }}" \
+            --api-key="${{ secrets.ENDOR_API_KEY }}" \
+            --api-secret="${{ secrets.ENDOR_API_SECRET }}"
+            
+
